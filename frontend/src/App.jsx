@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import "./App.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -107,9 +108,7 @@ function App() {
 
   if (!token) {
     return (
-      <div
-        style={{ maxWidth: 400, margin: "80px auto", fontFamily: "sans-serif" }}
-      >
+      <div className="auth-container">
         <h2>{isLogin ? "Login" : "Register"} — College RAG Chatbot</h2>
         <form onSubmit={handleAuth}>
           {!isLogin && (
@@ -117,46 +116,23 @@ function App() {
               placeholder="Name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: 10,
-                padding: 8,
-              }}
             />
           )}
           <input
             placeholder="Email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            style={{
-              display: "block",
-              width: "100%",
-              marginBottom: 10,
-              padding: 8,
-            }}
           />
           <input
             placeholder="Password"
             type="password"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
-            style={{
-              display: "block",
-              width: "100%",
-              marginBottom: 10,
-              padding: 8,
-            }}
           />
-          <button type="submit" style={{ width: "100%", padding: 10 }}>
-            {isLogin ? "Login" : "Register"}
-          </button>
+          <button type="submit">{isLogin ? "Login" : "Register"}</button>
         </form>
-        {authError && <p style={{ color: "red" }}>{authError}</p>}
-        <p
-          onClick={() => setIsLogin(!isLogin)}
-          style={{ cursor: "pointer", color: "blue" }}
-        >
+        {authError && <p style={{ color: "#f87171" }}>{authError}</p>}
+        <p className="switch-link" onClick={() => setIsLogin(!isLogin)}>
           {isLogin
             ? "Need an account? Register"
             : "Already have an account? Login"}
@@ -166,88 +142,50 @@ function App() {
   }
 
   return (
-    <div
-      style={{ maxWidth: 700, margin: "30px auto", fontFamily: "sans-serif" }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
+    <div className="app-container">
+      <div className="app-header">
         <h2>College RAG Chatbot</h2>
-        <button onClick={handleLogout}>Logout</button>
+        <button className="logout-btn" onClick={handleLogout}>
+          Logout
+        </button>
       </div>
 
-      <div
-        style={{
-          border: "1px solid #ccc",
-          padding: 15,
-          borderRadius: 8,
-          marginBottom: 20,
-        }}
-      >
+      <div className="card">
         <h3>Upload Document</h3>
         <form onSubmit={handleUpload}>
           <input
+            className="upload-input"
             placeholder="Title (optional)"
             value={uploadTitle}
             onChange={(e) => setUploadTitle(e.target.value)}
-            style={{
-              display: "block",
-              marginBottom: 10,
-              padding: 8,
-              width: "100%",
-            }}
           />
           <input
             type="file"
             accept="application/pdf"
             onChange={(e) => setFile(e.target.files[0])}
-            style={{ marginBottom: 10 }}
+            style={{ marginBottom: 10, color: "#cbd5e1" }}
           />
-          <button type="submit" disabled={uploading}>
+          <button className="upload-btn" type="submit" disabled={uploading}>
             {uploading ? "Processing..." : "Upload PDF"}
           </button>
         </form>
-        <div style={{ marginTop: 10 }}>
-          <strong>Uploaded documents:</strong>
-          <ul>
-            {documents.map((doc) => (
-              <li key={doc._id}>{doc.title}</li>
-            ))}
-          </ul>
-        </div>
+        <ul className="doc-list">
+          {documents.map((doc) => (
+            <li key={doc._id}>{doc.title}</li>
+          ))}
+        </ul>
       </div>
 
-      <div style={{ border: "1px solid #ccc", padding: 15, borderRadius: 8 }}>
+      <div className="card">
         <h3>Ask a Question</h3>
-        <div
-          style={{
-            minHeight: 200,
-            maxHeight: 300,
-            overflowY: "auto",
-            marginBottom: 10,
-          }}
-        >
+        <div className="chat-box">
           {messages.map((msg, i) => (
-            <div
-              key={i}
-              style={{
-                margin: "10px 0",
-                textAlign: msg.role === "user" ? "right" : "left",
-              }}
-            >
-              <div
-                style={{
-                  display: "inline-block",
-                  background: msg.role === "user" ? "#0084ff" : "#e5e5ea",
-                  color: msg.role === "user" ? "white" : "black",
-                  padding: "8px 12px",
-                  borderRadius: 12,
-                  maxWidth: "80%",
-                }}
-              >
-                {msg.text}
+            <div key={i}>
+              <div className={`msg-row ${msg.role}`}>
+                <div className={`msg-bubble ${msg.role}`}>{msg.text}</div>
               </div>
               {msg.sources && msg.sources.length > 0 && (
-                <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
-                  Sources:{" "}
+                <div className="sources-box">
                   {msg.sources.map((s, idx) => (
                     <div key={idx}>• {s.text}</div>
                   ))}
@@ -256,12 +194,11 @@ function App() {
             </div>
           ))}
         </div>
-        <form onSubmit={handleAsk} style={{ display: "flex", gap: 8 }}>
+        <form onSubmit={handleAsk} className="chat-input-row">
           <input
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Ask about college documents..."
-            style={{ flex: 1, padding: 8 }}
           />
           <button type="submit" disabled={asking}>
             {asking ? "..." : "Send"}
