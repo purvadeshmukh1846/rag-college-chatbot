@@ -20,7 +20,10 @@ function App() {
   const [asking, setAsking] = useState(false);
 
   useEffect(() => {
-    if (token) fetchDocuments();
+    if (token) {
+      fetchDocuments();
+      fetchHistory();
+    }
   }, [token]);
 
   const handleAuth = async (e) => {
@@ -39,6 +42,7 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     setToken("");
+    setMessages([]);
   };
 
   const fetchDocuments = async () => {
@@ -49,6 +53,29 @@ function App() {
       setDocuments(res.data.documents);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const fetchHistory = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/chat/history`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMessages(res.data.messages);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteDoc = async (id) => {
+    if (!window.confirm("Delete this document?")) return;
+    try {
+      await axios.delete(`${API_URL}/api/documents/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchDocuments();
+    } catch (err) {
+      alert("Failed to delete document");
     }
   };
 
@@ -171,7 +198,30 @@ function App() {
         </form>
         <ul className="doc-list">
           {documents.map((doc) => (
-            <li key={doc._id}>{doc.title}</li>
+            <li
+              key={doc._id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span>{doc.title}</span>
+              <button
+                onClick={() => handleDeleteDoc(doc._id)}
+                style={{
+                  background: "#ef4444",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 6,
+                  padding: "4px 10px",
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Delete
+              </button>
+            </li>
           ))}
         </ul>
       </div>
@@ -180,7 +230,7 @@ function App() {
         <h3>Ask a Question</h3>
         <div className="chat-box">
           {messages.map((msg, i) => (
-            <div key={i}>
+            <div key={msg._id || i}>
               <div className={`msg-row ${msg.role}`}>
                 <div className={`msg-bubble ${msg.role}`}>{msg.text}</div>
               </div>
