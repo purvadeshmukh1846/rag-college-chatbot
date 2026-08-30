@@ -18,11 +18,13 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
 
   useEffect(() => {
     if (token) {
       fetchDocuments();
       fetchHistory();
+      fetchSuggestions();
     }
   }, [token]);
 
@@ -67,6 +69,17 @@ function App() {
     }
   };
 
+  const fetchSuggestions = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/chat/suggestions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSuggestions(res.data.suggestions);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleDeleteDoc = async (id) => {
     if (!window.confirm("Delete this document?")) return;
     try {
@@ -97,6 +110,7 @@ function App() {
       setUploadTitle("");
       setFile(null);
       fetchDocuments();
+      fetchSuggestions();
       alert("Document uploaded successfully!");
     } catch (err) {
       alert(err.response?.data?.message || "Upload failed");
@@ -105,10 +119,9 @@ function App() {
     }
   };
 
-  const handleAsk = async (e) => {
-    e.preventDefault();
-    if (!question.trim()) return;
-    const userMsg = { role: "user", text: question };
+  const sendQuestion = async (q) => {
+    if (!q.trim()) return;
+    const userMsg = { role: "user", text: q };
     setMessages((prev) => [...prev, userMsg]);
     setQuestion("");
     setAsking(true);
@@ -116,12 +129,18 @@ function App() {
     try {
       const res = await axios.post(
         `${API_URL}/api/chat`,
-        { question: userMsg.text },
+        { question: q },
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setMessages((prev) => [
         ...prev,
-        { role: "ai", text: res.data.answer, sources: res.data.sources },
+        {
+          role: "ai",
+          text: res.data.answer,
+          sources: res.data.sources,
+          _id: res.data.messageId,
+          feedback: null,
+        },
       ]);
     } catch (err) {
       setMessages((prev) => [
@@ -130,6 +149,26 @@ function App() {
       ]);
     } finally {
       setAsking(false);
+    }
+  };
+
+  const handleAsk = (e) => {
+    e.preventDefault();
+    sendQuestion(question);
+  };
+
+  const handleFeedback = async (messageId, feedback, index) => {
+    setMessages((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, feedback } : m)),
+    );
+    try {
+      await axios.post(
+        `${API_URL}/api/chat/feedback`,
+        { messageId, feedback },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -228,6 +267,36 @@ function App() {
 
       <div className="card">
         <h3>Ask a Question</h3>
+
+        {suggestions.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              marginBottom: 14,
+            }}
+          >
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => sendQuestion(s)}
+                style={{
+                  background: "#334155",
+                  color: "#cbd5e1",
+                  border: "1px solid #475569",
+                  borderRadius: 20,
+                  padding: "6px 14px",
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="chat-box">
           {messages.map((msg, i) => (
             <div key={msg._id || i}>
@@ -239,6 +308,41 @@ function App() {
                   {msg.sources.map((s, idx) => (
                     <div key={idx}>• {s.text}</div>
                   ))}
+                </div>
+              )}
+              {msg.role === "ai" && msg._id && (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    marginTop: 4,
+                    marginLeft: 4,
+                  }}
+                >
+                  <button
+                    onClick={() => handleFeedback(msg._id, "up", i)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 16,
+                      opacity: msg.feedback === "up" ? 1 : 0.4,
+                    }}
+                  >
+                    👍
+                  </button>
+                  <button
+                    onClick={() => handleFeedback(msg._id, "down", i)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 16,
+                      opacity: msg.feedback === "down" ? 1 : 0.4,
+                    }}
+                  >
+                    👎
+                  </button>
                 </div>
               )}
             </div>

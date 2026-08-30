@@ -13,7 +13,6 @@ const askQuestion = async (req, res) => {
       return res.status(400).json({ message: "Question is required" });
     }
 
-    // User cha message save kar
     await Message.create({ userId: req.user.id, role: "user", text: question });
 
     const questionEmbedding = await getEmbedding(question);
@@ -22,13 +21,13 @@ const askQuestion = async (req, res) => {
     if (allChunks.length === 0) {
       const answer =
         "No documents have been uploaded yet. Please upload a document first.";
-      await Message.create({
+      const aiMsg = await Message.create({
         userId: req.user.id,
         role: "ai",
         text: answer,
         sources: [],
       });
-      return res.json({ answer, sources: [] });
+      return res.json({ answer, sources: [], messageId: aiMsg._id });
     }
 
     const scoredChunks = allChunks.map((chunk) => ({
@@ -44,15 +43,14 @@ const askQuestion = async (req, res) => {
       text: c.text.slice(0, 150) + "...",
     }));
 
-    // AI cha message save kar
-    await Message.create({
+    const aiMsg = await Message.create({
       userId: req.user.id,
       role: "ai",
       text: answer,
       sources,
     });
 
-    res.json({ answer, sources });
+    res.json({ answer, sources, messageId: aiMsg._id });
   } catch (err) {
     res
       .status(500)
@@ -60,7 +58,6 @@ const askQuestion = async (req, res) => {
   }
 };
 
-// Chat history fetch karnyasathi
 const getHistory = async (req, res) => {
   try {
     const messages = await Message.find({ userId: req.user.id }).sort({
@@ -72,4 +69,39 @@ const getHistory = async (req, res) => {
   }
 };
 
-module.exports = { askQuestion, getHistory };
+// Feedback save karnyasathi
+const submitFeedback = async (req, res) => {
+  try {
+    const { messageId, feedback } = req.body; // feedback: 'up' or 'down'
+    await Message.findByIdAndUpdate(messageId, { feedback });
+    res.json({ message: "Feedback recorded" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// Suggested questions - documents var based generic suggestions
+const getSuggestedQuestions = async (req, res) => {
+  try {
+    const chunkCount = await Chunk.countDocuments();
+    if (chunkCount === 0) {
+      return res.json({ suggestions: [] });
+    }
+    const suggestions = [
+      "What is this document about?",
+      "Summarize the key points",
+      "What are the important dates or deadlines mentioned?",
+      "Are there any requirements or eligibility criteria?",
+    ];
+    res.json({ suggestions });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+module.exports = {
+  askQuestion,
+  getHistory,
+  submitFeedback,
+  getSuggestedQuestions,
+};

@@ -6,6 +6,7 @@ const messageSchema = new mongoose.Schema(
     role: { type: String, enum: ["user", "ai"], required: true },
     text: { type: String, required: true },
     sources: [{ text: String }],
+    feedback: { type: String, enum: ["up", "down", null], default: null },
   },
   { timestamps: true },
 );
